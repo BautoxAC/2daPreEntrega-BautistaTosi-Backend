@@ -1,8 +1,9 @@
 import multer from "multer"
 import { Server } from "socket.io"
-import { Productmodel } from "./DAO/models/products.model.js"
+import { CartManagerDB } from "./DAO/DB/CartManagerDB.js"
 import { MessageManagerDB, UserManagerDB } from "./DAO/DB/MessageManagerDB.js"
 import { ProductManagerDB } from "./DAO/DB/ProductManagerDB.js"
+import { cartModel } from "./DAO/models/carts.model.js"
 //------------MULTER------------------
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -31,9 +32,11 @@ export function connectSocketServer(httpServer) {
   const socketServer = new Server(httpServer)
   socketServer.on("connection", async (socket) => {
     console.log("cliente conectado")
+    //vista /chat
     const userManager = new UserManagerDB()
     const MessageManager = new MessageManagerDB()
     const list = new ProductManagerDB()
+    const CartManager = new CartManagerDB()
     socket.on("new_user_front_to_back", async (data) => {
       let message = {}
       try {
@@ -68,6 +71,12 @@ export function connectSocketServer(httpServer) {
     socket.on("msg_front_to_back_delete_product", async (product) => {
       await list.deleteProduct(product._id)
       socket.emit("msg_front_to_back_deleted", await list.getProducts())
+    })
+    //vista /products
+    socket.on("add_product_to_cart_front_to_back", async (idProduct) => {
+      const { _id } = await cartModel.findOne({})
+      const { status } = await CartManager.addProduct(_id, idProduct)
+      socket.emit("add_product_to_cart_back_to_front", { status: status, cartId: _id })
     })
   })
 }

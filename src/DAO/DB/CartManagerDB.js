@@ -1,9 +1,11 @@
 import { cartModel } from "../models/carts.model.js";
 import { newMessage } from "../../utils.js";
+import { Productmodel } from "../models/products.model.js";
+import { ProductManagerDB } from "./ProductManagerDB.js";
 export class CartManagerDB {
     async getCartById(id) {
         try {
-            let cartFindId = await cartModel.findOne({ _id: id }).lean()
+            let cartFindId = await cartModel.findOne({ _id: id }).populate("products.idProduct").lean()
             if (cartFindId) {
                 return newMessage("success", "Found successfully", cartFindId.products)
             } else {
@@ -40,7 +42,6 @@ export class CartManagerDB {
             let messageReturn = {}
             if (productRepeated) {
                 const positionProductRepeated = cart.products.indexOf(productRepeated)
-                console.log(positionProductRepeated, cart.products[positionProductRepeated].quantity)
                 if (cart.products[positionProductRepeated].quantity < product.stock) {
                     cart.products[positionProductRepeated].quantity++
                     messageReturn = newMessage("success", "Product repeated: quantity added correctly", cart)
@@ -62,13 +63,62 @@ export class CartManagerDB {
         try {
             const cartFindId = await cartModel.findOne({ _id: idCart }).lean()
             const cartProducts = cartFindId.products
-            const positionProduct = cartFindId.products.indexOf(cartFindId.products.find(idPro => idPro === idProduct))
+            const positionProduct = cartFindId.products.indexOf(cartFindId.products.find(pro => pro.idProduct === idProduct))
             cartProducts.splice(positionProduct, 1)
             await cartModel.updateOne({ _id: cartFindId._id }, cartFindId)
-            return newMessage("succes", "product deleted", cartFindId)
+            return newMessage("success", "product deleted", cartFindId)
         } catch (e) {
             console.log(e)
-            throw new Error("A problem ocurred")
+            return newMessage("failure", "A problem ocurred", "")
+        }
+    }
+    async addNewProducts(idCart, products) {
+        try {
+            if (!Array.isArray(products) && products.length === 0) {
+                throw new Error(`You must pass an array and at least one product`)
+            }
+            for (const product of products) {
+                const productExist = await Productmodel.findOne({ _id: product.idProduct })
+                if (!productExist) {
+                    throw new Error(`The product with the id (${product.idProduct}) does not exist`)
+                }
+                const idRepeated = products.filter(pro => pro.idProduct === product.idProduct)
+                if (idRepeated.length === 2) { throw new Error(`The product with the id (${product.idProduct}) is repeated in the array you passed`) }
+            }
+            const cartFindId = await cartModel.findOne({ _id: idCart }).lean()
+            cartFindId.products = products
+            await cartModel.updateOne({ _id: cartFindId._id }, cartFindId)
+            return newMessage("success", "products updated", cartFindId)
+        } catch (e) {
+            console.log(e)
+            return newMessage("failure", "A problem ocurred", "")
+        }
+    }
+    async deleteAllProducts(idCart) {
+        try {
+            const cartFindId = await cartModel.findOne({ _id: idCart }).lean()
+            cartFindId.products = []
+            await cartModel.updateOne({ _id: cartFindId._id }, cartFindId)
+            return newMessage("success", "products emptied", cartFindId)
+        } catch (e) {
+            console.log(e)
+            return newMessage("failure", "A problem ocurred", "")
+        }
+    }
+    async updateQuantityProduct(idCart, idProduct, quantity) {
+        try {
+            const quantityNumber = Object.values(quantity)
+            if (typeof (quantityNumber[0]) !== "number") { return newMessage("failure", "the quantity must be a number", "") }
+            const cartFindId = await cartModel.findOne({ _id: idCart }).lean()
+            const cartProducts = cartFindId.products
+            const productToUpdate = cartProducts.find(pro => pro.idProduct === idProduct)
+            if (!productToUpdate) { return newMessage("failure", "the product was not found inside the cart", "") }
+            productToUpdate.quantity = quantityNumber[0]
+            await cartModel.updateOne({ _id: cartFindId._id }, cartFindId)
+            return newMessage("success", "the quantity of product was updated", cartFindId)
+        } catch (e) {
+            console.log(e)
+            return newMessage("failure", "A problem ocurred", "")
         }
     }
 }

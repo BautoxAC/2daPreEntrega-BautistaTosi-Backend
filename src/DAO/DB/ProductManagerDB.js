@@ -13,7 +13,7 @@ export class ProductManagerDB {
                 }
             }
             const products = await this.getProducts()
-            let codeVerificator = products.find((product) => product.code === code)
+            let codeVerificator = products.payload.find((product) => product.code === code)
             if (codeVerificator) {
                 return newMessage("failure", "Error, the code is repeated", "")
             } else if (!addPro) {
@@ -67,18 +67,18 @@ export class ProductManagerDB {
         }
 
     }
-    async getProducts(limit, page, query, sort) {
+    async getProducts(limit, page, query, sort,url) {
         const res = (status, payload, restPaginate) => {
-            let prevLink = `http://localhost:8080/api/products?limit=${limit}&category=${query}&sort=${sort}&page=`
-            let nextLink = `http://localhost:8080/api/products?limit=${limit}&category=${query}&sort=${sort}&page=`
-            restPaginate.hasPrevPage ? prevLink += restPaginate.prevPage : prevLink = null
-            restPaginate.hasNextPage ? nextLink += restPaginate.nextPage : nextLink = null
+            let prevLink = `${url}?limit=${limit || ""}&category=${query || ""}&sort=${sort || ""}&page=`
+            let nextLink = `${url}?limit=${limit || ""}&category=${query || ""}&sort=${sort || ""}&page=`
+            restPaginate.hasPrevPage ? prevLink += restPaginate.prevPage : prevLink = null 
+            restPaginate.hasNextPage ? nextLink += restPaginate.nextPage : nextLink = null 
             return {
                 status: status, payload: payload, prevLink: prevLink, nextLink: nextLink, totalPages: restPaginate.totalPages, prevPage: restPaginate.prevPage, nextPage: restPaginate.nextPage, page: restPaginate.page, hasPrevPage: restPaginate.hasPrevPage, hasNextPage: restPaginate.hasNextPage
             }
         }
         try {
-            const { docs, ...rest } = await Productmodel.paginate({ [query && "category"]: query }, { limit: limit || 10, page: page || 1, sort: { price: sort || null } })
+            const { docs, ...rest } = await Productmodel.paginate({ [query && "category"]: query }, { limit: limit || 10, page: page || 1, sort: { price: sort || null }, lean: true })
             return res("success", docs, rest)
         } catch (e) {
             console.log(e)

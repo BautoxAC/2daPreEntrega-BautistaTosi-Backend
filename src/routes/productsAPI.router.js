@@ -1,30 +1,30 @@
 import express from "express"
 import { ProductManagerDB } from "../DAO/DB/ProductManagerDB.js"
 import { newMessage, uploader } from "../utils.js"
-export const productsRouter = express.Router()
+export const productsAPIRouter = express.Router()
 const list = new ProductManagerDB()
 
-productsRouter.get("/", async (req, res) => {
+productsAPIRouter.get("/", async (req, res) => {
     const { limit, page, query, sort } = req.query
-    return res.status(200).json(await list.getProducts(limit, page, query, sort))
+    const url="http://localhost:8080/api/products"
+    return res.status(200).json(await list.getProducts(limit, page, query, sort,url))
 })
 
-productsRouter.get("/:pid", async (req, res) => {
+productsAPIRouter.get("/:pid", async (req, res) => {
     const Id = req.params.pid
     return res.status(200).json(newMessage("success", "producto por id", await list.getProductById(Id)))
 })
 
-
-productsRouter.put("/:pid", async (req, res) => {
+productsAPIRouter.put("/:pid", async (req, res) => {
     const Id = req.params.pid
     const productPropsToUpdate = req.body
     return res.status(200).json(newMessage(await list.updateProduct(Id, productPropsToUpdate)))
 })
 
-productsRouter.delete("/:pid", async (req, res) => {
+productsAPIRouter.delete("/:pid", async (req, res) => {
     const Id = req.params.pid
     return res.status(200).json(await list.deleteProduct(Id))
 })
-productsRouter.post("/", uploader.single("file"), async (req, res) => {
+productsAPIRouter.post("/", uploader.single("file"), async (req, res) => {
     res.redirect("/realtimeproducts")
 })

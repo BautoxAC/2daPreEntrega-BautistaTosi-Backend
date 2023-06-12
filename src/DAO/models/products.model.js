@@ -8,7 +8,7 @@ const schema = new Schema({
     price: { type: Number, required: true },
     thumbnails: { type: Array, default: [], required: true },
     status: { type: Boolean, default: true, required: true },
-    category: { type: String, required: true, max: 100 },
+    category: { type: String, required: true, max: 100, index: true },
 });
 schema.plugin(mongoosePaginate)
 export const Productmodel = model('products', schema);
